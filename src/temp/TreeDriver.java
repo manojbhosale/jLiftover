@@ -1,4 +1,7 @@
-package intervalTree;
+package temp;
+
+import intervalTree.Interval;
+import intervalTree.IntervalNode;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

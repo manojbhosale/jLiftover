@@ -10,12 +10,14 @@ import java.util.List;
 public class LiftChain {
 
 
-	public List<ChainFileUtils>  liftOverChain() throws IOException, ChainException{
+	public static String chainFilePath = "";
+	
+	public List<Chain>  liftOverChain() throws IOException, ChainException{
 
 		BufferedReader br = new BufferedReader(new FileReader("C:\\Manoj\\BiologicalData\\hg19ToHg38.over.chain"));
 		String line = "";
-		List<ChainFileUtils> chains = new ArrayList<ChainFileUtils>();
-		ChainFileUtils cfu = new ChainFileUtils();
+		List<Chain> chains = new ArrayList<Chain>();
+		Chain cfu = new Chain();
 
 
 		while((line = br.readLine())!= null){
@@ -36,14 +38,14 @@ public class LiftChain {
 
 	}
 
-	public HashMap<String,IntervalNode> indexChains(List<ChainFileUtils> chains) throws ChainException{
+	public HashMap<String,IntervalNode> indexChains(List<Chain> chains) throws ChainException{
 
 		HashMap<String, Integer> sourceSize = new HashMap<String, Integer>();
 		HashMap<String, Integer> targetSize = new HashMap<String, Integer>();
 		HashMap<String, IntervalNode> chainIndex = new HashMap<String, IntervalNode>();
 		
 
-		for(ChainFileUtils c: chains){
+		for(Chain c: chains){
 			
 			//System.out.println(c.targetName);
 			sourceSize.put(c.sourceName, c.sourceSize);

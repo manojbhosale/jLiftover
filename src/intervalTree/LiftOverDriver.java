@@ -1,5 +1,7 @@
 package intervalTree;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -13,9 +15,11 @@ public class LiftOverDriver {
 
 		LiftChain lc = new LiftChain();
 
-		List<ChainFileUtils> cfu = lc.liftOverChain(); 
-
-
+		List<Chain> cfu = lc.liftOverChain(); 
+		
+		//LiftChain.chainFilePath = new File
+				
+		BufferedReader br = new BufferedReader(new FileReader("C:\\Manoj\\BiologicalData\\test.bed"));
 		HashMap<String,IntervalNode> chainIndex = lc.indexChains(cfu);
 
 
@@ -28,10 +32,19 @@ public class LiftOverDriver {
 		//IntervalNode in1 = lc.query(chainIndex, "chr1", 1000000);
 
 		//System.out.println(in1.inter);
-		ChainFileUtils cfu1 = new ChainFileUtils();
+		Chain cfu1 = new Chain();
 		
-		System.out.println(cfu1.convertCoordinate(chainIndex, "chr7", 127472363,"+"));
-		 		
+		String line = "";
+		System.out.println(cfu1.convertCoordinate(chainIndex, "chr1", 10001,"+"));
+		while((line = br.readLine())!= null){
+			
+			line = line.trim();
+			String[] test = line.split("\t");
+			System.out.println(test[2]);
+			
+				System.out.println(test[0]+"\t"+cfu1.convertCoordinate(chainIndex, test[0], Integer.parseInt(test[1]),"+")+"\t"+cfu1.convertCoordinate(chainIndex, test[0], Integer.parseInt(test[2]),"+"));
+			
+			}		
 	}
 
 }

@@ -60,7 +60,7 @@ public class IntervalNode {
 
 	public IntervalNode overlapSearch(IntervalNode root, Interval i){
 
-		if(!root.isValid()) return null;
+		if(!root.isValid()) return new IntervalNode();
 
 		if(doOverlap(root.inter, i)){
 			return root;
