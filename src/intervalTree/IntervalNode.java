@@ -1,110 +1,153 @@
 package intervalTree;
 
-public class IntervalNode {
+import java.util.ArrayList;
+import java.util.List;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.Map.Entry;
 
-	Interval inter;
-	int max;
-	IntervalNode left, right;
+class IntervalNode<Type> {
 
-	public IntervalNode(Interval i){
-		this.inter = i;
-		this.left = new IntervalNode();
-		this.right = new IntervalNode();
-		this.max = i.end;
+	private SortedMap<Interval<Type>, List<Interval<Type>>> intervals;
+	private long center;
+	private IntervalNode<Type> leftNode;
+	private IntervalNode<Type> rightNode;
+
+	public IntervalNode() {
+		intervals = new TreeMap<Interval<Type>, List<Interval<Type>>>();
+		center = 0;
+		leftNode = null;
+		rightNode = null;
 	}
 
-	public IntervalNode(){
-		this.inter = null;
-		this.left = null;
-		this.right = null;
-		this.max = 0;
+	public IntervalNode(List<Interval<Type>> intervalList) {
+
+		intervals = new TreeMap<Interval<Type>, List<Interval<Type>>>();
+
+		SortedSet<Long> endpoints = new TreeSet<Long>();
+
+		for (Interval<Type> interval : intervalList) {
+			endpoints.add(interval.getStart());
+			endpoints.add(interval.getEnd());
+		}
+
+		long median = getMedian(endpoints);
+		center = median;
+
+		List<Interval<Type>> left = new ArrayList<Interval<Type>>();
+		List<Interval<Type>> right = new ArrayList<Interval<Type>>();
+
+		for (Interval<Type> interval : intervalList) {
+			if (interval.getEnd() < median)
+				left.add(interval);
+			else if (interval.getStart() > median)
+				right.add(interval);
+			else {
+				List<Interval<Type>> posting = intervals.get(interval);
+				if (posting == null) {
+					posting = new ArrayList<Interval<Type>>();
+					intervals.put(interval, posting);
+				}
+				posting.add(interval);
+			}
+		}
+
+		if (left.size() > 0)
+			leftNode = new IntervalNode<Type>(left);
+		if (right.size() > 0)
+			rightNode = new IntervalNode<Type>(right);
 	}
 
-	public IntervalNode insertNode(IntervalNode root, Interval i){
+	public List<Interval<Type>> stab(long time) {
+		List<Interval<Type>> result = new ArrayList<Interval<Type>>();
 
-		if(!root.isValid()){
-			return new IntervalNode(i);
-		}
-//System.out.println("Manoj");
-		int l = root.inter.start;
-
-		if(i.start < l){
-			root.left = insertNode(root.left, i);
-		}else{
-			root.right = insertNode(root.right, i);
+		for (Entry<Interval<Type>, List<Interval<Type>>> entry : intervals
+				.entrySet()) {
+			if (entry.getKey().contains(time))
+				for (Interval<Type> interval : entry.getValue())
+					result.add(interval);
+			else if (entry.getKey().getStart() > time)
+				break;
 		}
 
-		if(root.inter.end < i.end){
-			root.max = i.end;
-		}
-
-		return root;
+		if (time < center && leftNode != null)
+			result.addAll(leftNode.stab(time));
+		else if (time > center && rightNode != null)
+			result.addAll(rightNode.stab(time));
+		return result;
 	}
 
-	void inorder(IntervalNode root){
+	public List<Interval<Type>> query(Interval<?> target) {
+		List<Interval<Type>> result = new ArrayList<Interval<Type>>();
 
-		if(!root.isValid())	return;
-
-		inorder(root.left);
-		
-		System.out.println(root.inter+" Max = "+root.max);
-		
-		inorder(root.right);
-
-	}
-
-	public boolean isValid(){
-		return this.inter != null;
-	}
-
-
-	public IntervalNode overlapSearch(IntervalNode root, Interval i){
-
-		if(!root.isValid()) return new IntervalNode();
-
-		if(doOverlap(root.inter, i)){
-			return root;
+		for (Entry<Interval<Type>, List<Interval<Type>>> entry : intervals
+				.entrySet()) {
+			if (entry.getKey().intersects(target))
+				for (Interval<Type> interval : entry.getValue())
+					result.add(interval);
+			else if (entry.getKey().getStart() > target.getEnd())
+				break;
 		}
 
-		if(root.left.max >= i.start){
-			return overlapSearch(root.left, i);
-		}
-
-		return overlapSearch(root.right, i);
+		if (target.getStart() < center && leftNode != null)
+			result.addAll(leftNode.query(target));
+		if (target.getEnd() > center && rightNode != null)
+			result.addAll(rightNode.query(target));
+		return result;
 	}
 
-	public boolean doOverlap(Interval inter1, Interval inter2){
-
-		if(inter1.start <= inter2.end && inter1.end >= inter2.start){
-			return true;
-		}
-		return false;
+	public long getCenter() {
+		return center;
 	}
 
-	public static void main(String args[]){
+	public void setCenter(long center) {
+		this.center = center;
+	}
 
-		IntervalNode in = new IntervalNode();
+	public IntervalNode<Type> getLeft() {
+		return leftNode;
+	}
 
-		//int[][] pairs = {{15, 20}, {10, 30}, {17, 19},{5, 20}, {12, 15}, {30, 40}};
-		int[][] pairs = {{50, 100}, {4, 5}, {200, 300}};
-		IntervalNode root = new IntervalNode();
+	public void setLeft(IntervalNode<Type> left) {
+		this.leftNode = left;
+	}
 
-		for(int[] apair : pairs){
-			root = in.insertNode(root, new Interval(apair[0], apair[1]));
+	public IntervalNode<Type> getRight() {
+		return rightNode;
+	}
+
+	public void setRight(IntervalNode<Type> right) {
+		this.rightNode = right;
+	}
+
+	private Long getMedian(SortedSet<Long> set) {
+		int i = 0;
+		int middle = set.size() / 2;
+		for (Long point : set) {
+			if (i == middle)
+				return point;
+			i++;
 		}
-
-		in.inorder(root);
-
-		//System.out.println(root);
-
-		//System.out.println(in.overlapSearch(root, new Interval(199, 200)));
+		return null;
 	}
 
 	@Override
 	public String toString() {
-		return "IntervalNode [inter=" + inter + ", max=" + max + ", left="
-				+ left + ", right=" + right + "]";
+		StringBuffer sb = new StringBuffer();
+		sb.append(center + ": ");
+		for (Entry<Interval<Type>, List<Interval<Type>>> entry : intervals
+				.entrySet()) {
+			sb.append("[" + entry.getKey().getStart() + ","
+					+ entry.getKey().getEnd() + "]:{");
+			for (Interval<Type> interval : entry.getValue()) {
+				sb.append("(" + interval.getStart() + "," + interval.getEnd()
+						+ "," + interval.getData() + ")");
+			}
+			sb.append("} ");
+		}
+		return sb.toString();
 	}
-
 
 }

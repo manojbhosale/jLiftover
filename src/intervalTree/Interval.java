@@ -1,40 +1,71 @@
 package intervalTree;
 
-import java.util.List;
-import java.util.ArrayList;
+public class Interval<Type> implements Comparable<Interval<Type>>
+{
 
-public class Interval {
+  private long start;
+  private long end;
+  private Type data;
 
-	public int start;
-	public int end;
-	public List<Object> data;
-	public Interval temp = null;
-	
-	@Override
-	public String toString() {
-		return "Interval [start=" + start + ", end=" + end + ", data=" 
-				+ "]";
-	}
+  public Interval(long start, long end, Type data)
+  {
+      this.start = start;
+      this.end = end;
+      this.data = data;
+  }
 
+  public long getStart()
+  {
+      return start;
+  }
 
-	public Interval(int start, int end) {
-		super();
-		this.start = start;
-		this.end = end;
-	}
+  public void setStart(long start)
+  {
+      this.start = start;
+  }
 
+  public long getEnd()
+  {
+      return end;
+  }
 
-	public Interval(int start, int end, List data) {
-		super();
-		this.start = start;
-		this.end = end;
-		this.data = data;
-	}
-	
-	public Interval(){
-		this.temp = null;
-		this.start = 0;
-		this.end = 0;
-	}
-	
+  public void setEnd(long end)
+  {
+      this.end = end;
+  }
+
+  public Type getData()
+  {
+      return data;
+  }
+
+  public void setData(Type data)
+  {
+      this.data = data;
+  }
+
+  public boolean contains(long time)
+  {
+      return time < end && time > start;
+  }
+
+  public boolean intersects(Interval<?> other)
+  {
+      return other.getEnd() > start && other.getStart() < end;
+  }
+
+  public int compareTo(Interval<Type> other)
+  {
+      if (start < other.getStart())
+          return -1;
+      else if (start > other.getStart())
+          return 1;
+      else if (end < other.getEnd())
+          return -1;
+      else if (end > other.getEnd())
+          return 1;
+      else
+          return 0;
+  }
+
 }

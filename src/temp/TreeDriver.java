@@ -1,11 +1,11 @@
 package temp;
 
-import intervalTree.Interval;
-import intervalTree.IntervalNode;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+
+import newTree.Interval;
+import newTree.IntervalNode;
 
 public class TreeDriver {
 	
