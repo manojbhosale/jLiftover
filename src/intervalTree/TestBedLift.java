@@ -1,5 +1,6 @@
 public void liftBed(HashMap<String,IntervalTree<List<Object>>> chainIndex,File inbed, File outBed) throws Exception{
 		boolean reportMultiple = false;
+		Integer mergingThreshold = 2000;
 		double inputRemapRatio = 0.95;
 		PrintWriter pw = new PrintWriter(outBed);
 		BufferedReader br = new BufferedReader(new FileReader(inbed));
@@ -40,19 +41,41 @@ public void liftBed(HashMap<String,IntervalTree<List<Object>>> chainIndex,File i
 				}
 
 				SortedSet<BedInterval> res = new TreeSet<>();
+				
 				res = chn.convertCoordinate(chainIndex, chromosome, start, stop, strand);
 
-				//pw.println(line);
+				String selectedCombi = selectStrandAndChromosome(res);
+
+				String[] chrStrand = selectedCombi.split("\t");
+
+				
+				
+				SortedSet<BedInterval> filteredByChrStrand = new TreeSet<BedInterval>();
+				
+				for(BedInterval i: res){
+					
+					if(i.getChromosome().equals(chrStrand[0]) && i.getStrand().equals(chrStrand[1])){
+						
+						filteredByChrStrand.add(i);
+						
+					}
+					
+				}
+				
+				if(filteredByChrStrand.isEmpty()){
+					System.out.println("unmapped!!");
+					continue;
+				}
+				
+				SortedSet<BedInterval> nearestResult = getNearestIntervals(filteredByChrStrand, mergingThreshold);
 
 				Integer queryBaseSize = stop - start;
 				Integer remapBaseSize = 0; 
-				for(BedInterval inter : res){
-
-					remapBaseSize = remapBaseSize + inter.getStop() - inter.getStart();
-
+				for(BedInterval inter : nearestResult){
+					if(inter.getChromosome().equals(chrStrand[0]) && inter.getStrand().equals(chrStrand[1])){	
+						remapBaseSize = remapBaseSize + inter.getStop() - inter.getStart();
+					}
 				}
-
-				
 
 				double remapRatio = (double)remapBaseSize/queryBaseSize;
 
@@ -64,57 +87,185 @@ public void liftBed(HashMap<String,IntervalTree<List<Object>>> chainIndex,File i
 					continue;
 
 				}
+				pw.println(line);
 				//System.out.println(line+"\t"+remapRatio+"\t"+remapBaseSize+"\t"+queryBaseSize);
 				if(reportMultiple){
 
-					for(BedInterval inter : res){
-
-						pw.print(inter.getChromosome()+"\t"+inter.getStart()+"\t"+inter.getStop()+"\t"+inter.getStrand());
-						for(int i = 3; i < splited.length ; i++){
-							if(i == strandIndex){
-								pw.print("\t"+inter.getStrand());
-							}else{
-								pw.print("\t"+splited[i]);
+					for(BedInterval inter : nearestResult){
+						if(inter.getChromosome().equals(chrStrand[0]) && inter.getStrand().equals(chrStrand[1])){
+							pw.print(inter.getChromosome()+"\t"+inter.getStart()+"\t"+inter.getStop()+"\t"+inter.getStrand());
+							for(int i = 3; i < splited.length ; i++){
+								if(i == strandIndex){
+									pw.print("\t"+inter.getStrand());
+								}else{
+									pw.print("\t"+splited[i]);
+								}
 							}
 						}
 						pw.print("\n");
 
 					}
 				}else{
+
+					/*List<BedInterval> plus = new ArrayList<>();
+					List<BedInterval> minus = new ArrayList<>();
+					// segregate strand
+					for(BedInterval i : res){
+						if(i.getStrand().equals("+")){
+							plus.add(i);
+						}else if(i.getStrand().equals("-")){
+							minus.add(i);
+						}else{
+							throw new ChainException("Invalid strand!!");
+						}
+					}
+					 */
 					
-					BedInterval firstInterval = res.first();
-					BedInterval lastInterval = res.last();
+					/*if(res.isEmpty()){
+						System.out.println("Unmapped");
+						continue;
+					}*/
+					
+					
+					//System.out.println(nearestResult.);
+					/*if(nearestResult.isEmpty()){
+						continue;
+					}
+					*/
+					BedInterval firstInterval = new BedInterval();
+					BedInterval lastInterval = new BedInterval();
+					try{
+						firstInterval = nearestResult.first();
+						lastInterval = nearestResult.last();
+					}catch(NoSuchElementException e){
+						System.out.println(filteredByChrStrand.first().getStart());
+					}
 					
 					Integer combinedStart = firstInterval.getStart();
 					Integer combinedStop = lastInterval.getStop();
-					
-					
-					
-						
-						pw.print(firstInterval.getChromosome()+"\t"+combinedStart+"\t"+combinedStop+"\t"+firstInterval.getStrand());
-						for(int i = 3; i < splited.length ; i++){
-							if(i == strandIndex){
-								pw.print("\t"+firstInterval.getStrand());
-							}else{
-								pw.print("\t"+splited[i]);
-							}
+
+					pw.print(firstInterval.getChromosome()+"\t"+combinedStart+"\t"+combinedStop+"\t"+firstInterval.getStrand());
+					for(int i = 3; i < splited.length ; i++){
+						if(i == strandIndex){
+							pw.print("\t"+firstInterval.getStrand());
+						}else{
+							pw.print("\t"+splited[i]);
 						}
-						pw.print("\n");
-
-					
-					
-					
-
-					
+					}
+					pw.print("\n");
 				}
-
 			}
-
 		}
 		pw.close();
 		pwfail.close();
+	}
 
 
+	public String selectStrandAndChromosome(SortedSet<BedInterval> res){
+
+		Map<String, Integer> chrStrandMap = new HashMap<>();
+		String selectedCombi = "";
+		for(BedInterval i : res){
+
+			String tempStr = i.getChromosome()+"\t"+i.getStrand();
+
+
+			if(chrStrandMap.containsKey(tempStr)){
+
+				Integer size = chrStrandMap.get(tempStr);
+				Integer newIntervalSize = i.getStop() - i.getStart();
+				size = size + newIntervalSize;
+
+				chrStrandMap.put(tempStr, size);
+
+			}else{
+				Integer newIntervalSize = i.getStop() - i.getStart();
+				chrStrandMap.put(tempStr,newIntervalSize);
+			}
+
+
+			Integer oldSize = 0;
+
+			//List<Integer> allSizes = chrStrandMap.values();
+
+
+			for(String combi : chrStrandMap.keySet()){
+				Integer newSize = chrStrandMap.get(combi);
+				if(newSize > oldSize){
+					oldSize = newSize;
+				}
+			}
+
+
+
+			for(String combi : chrStrandMap.keySet()){
+				if(chrStrandMap.get(combi) == oldSize){
+					selectedCombi = combi;
+				}
+			}
+
+			/*	if(chrStrandMap.containsKey(i.getStrand())){
+				Map<String,Integer> chrMap = chrStrandMap.get(i.getStrand());
+				if(chrMap.containsKey(i.getChromosome())){
+					Integer size = chrMap.get(i.getChromosome());
+					Integer newSize = i.getStop() - i.getStart();
+					size = size + newSize;
+					chrMap.put(i.getChromosome(), size);
+				}else{
+					Integer newSize = i.getStop() - i.getStart();
+					chrMap.put(i.getChromosome(), newSize);
+				}
+			}else{
+				Map<String,Integer> chrMap = new HashMap<>();
+				Integer newSize = i.getStop() - i.getStart();
+				chrMap.put(i.getChromosome(),newSize);
+				chrStrandMap.put(i.getStrand(),chrMap);
+			}
+			 */	
+
+		}
+		return selectedCombi;
+
+	}
+	
+	
+	public SortedSet<BedInterval> getNearestIntervals(SortedSet<BedInterval> res, Integer mergingThreshold){
+		
+		
+		 SortedSet<BedInterval> resultIntervals = new TreeSet<BedInterval>();
+		 
+		 if(res.size() == 1){
+			 return res;
+		 }
+		 
+		 BedInterval first = res.first();
+		 
+		 int counter = 0;
+		 
+		 for(BedInterval one : res){
+			 if(counter == 0){
+				 counter++;
+				 continue; 
+			 }
+			 if((one.getStart() - first.getStop()) < mergingThreshold){
+				 
+				 resultIntervals.add(one);
+				 resultIntervals.add(first);
+				 
+			 }else{
+				 resultIntervals = new TreeSet<BedInterval>();
+			 }
+			 
+			 first = one;
+			 
+		 }
+		 
+		 if(resultIntervals.isEmpty()){
+			 resultIntervals.add(res.last());
+		 }
+		 
+		return resultIntervals;
+		
 	}
 
 }
